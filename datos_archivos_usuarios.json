@@ -1,0 +1,15 @@
+{
+    "datos_archivos_usuarios": [
+
+        {
+            "usuario": "niki",
+            "directorio_madre": "archivos_usuarios\\niki",
+            "archivos": [
+                "R 4.pdf"
+            ],
+            "macs": {
+                "R 4.pdf": "85d75b991846b67e391252748de8e89984e98d83c046d94f4762114c73111240"
+            }
+        }
+    ]
+}

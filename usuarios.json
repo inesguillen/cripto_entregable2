@@ -1,0 +1,12 @@
+{
+    "usuarios": {
+        "niki": {
+            "password_hash": "$2b$12$9/Mu9UPTX3Uj9eKaMk3mTOLIxzpFjMZTycsGF6zgynlZpLYPIBmZK",
+            "nombre": "niki",
+            "apellido1": "n",
+            "apellido2": "",
+            "mail": "niki@gmail.com",
+            "centro_medico": "k"
+        }
+    }
+}
