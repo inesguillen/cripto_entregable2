@@ -50,8 +50,8 @@ class RegistroUsuario:
         datos = self.cargar_datos('usuarios.json')
 
         # Comprobar si el usuario ya existe
-        for u in datos["usuarios"]:
-            if u["usuario"] == self.__usuario:
+        for usuario, info in datos["usuarios"].items():
+            if usuario == self.__usuario:
                 print("\nERROR: Usuario ya registrado.\n")
                 return False
 
@@ -61,8 +61,9 @@ class RegistroUsuario:
             return False
 
         # Comprobar si el correo ya existe
-        for c in datos["usuarios"]:
-            if c["mail"] == self.__mail:
+        for info in datos["usuarios"].values():
+            if info["mail"] == self.__mail:
+
                 print("\nERROR: Correo ya existente en la base de datos.\n")
                 return False
 
