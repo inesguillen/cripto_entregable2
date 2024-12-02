@@ -3,6 +3,7 @@ import json
 from registro import RegistroUsuario
 from inicio_sesion import InicioSesion
 from gestion_archivos import GestionArchivos
+from gestion_firmas import GestionFirmas
 
 def menu():
     print("Bienvenido a su gestor de archivos médicos. Por favor, seleccione una opción:")
@@ -41,43 +42,44 @@ while not salir:
         iniciar_sesion = InicioSesion(usuario, password)
 
         # a parte de checkear los datos, devuelve un bool que es True si se inicó sesión correctamente
-        sesion_iniciada = iniciar_sesion.iniciar_sesión()
+        sesion_iniciada, clave = iniciar_sesion.iniciar_sesión()
 
-        while sesion_iniciada:
-            # abro json
-            if os.path.exists('usuarios.json'):
-                with open('usuarios.json', 'r') as file:
-                    datos = json.load(file)
+        if sesion_iniciada:
+            gestion_archivos = GestionArchivos(usuario, clave)
+            gestion_firma = GestionFirmas(usuario, clave)
 
-            print("\nBienvenido, " + usuario)
-            print("\nPor favor, seleccione una opción:")
-            print("1. Ver archivos PDF\n2. Abrir archivo\n3. Subir archivo PDF\n4. Eliminar archivo PDF PDF\n5.Salir")
-            select = int(input("Selección: "))
-
-            gestion_archivos = GestionArchivos(usuario)
-
-            if select == 1:
-                #ver_archivos = GestionArchivos(usuario).ver_archivos()
-                gestion_archivos.ver_archivos()
-
-            elif select == 2:
-                #abrir_archivo = GestionArchivos(usuario).abrir_archivo()
-                gestion_archivos.abrir_archivo()
-
-            elif select == 3:
-                #subir_archivos = GestionArchivos(usuario).subir_archivos()
-                gestion_archivos.subir_archivos()
-
-            elif select == 4:
-                #eliminar_archivo = GestionArchivos(usuario).eliminar_archivo()
-                gestion_archivos.eliminar_archivo()
-
-            elif select == 5:
-                print("\nCerrando sesion...\n")
-                sesion_iniciada = False
-
+            if gestion_firma.private_key:
+                print("Clave privada cargada correctamente.")
             else:
-                print("Opción no válida")
+                print("Error: La clave privada no se cargó.")
+
+            while True:
+                print("\nBienvenido, " + usuario)
+                print("\nPor favor, seleccione una opción:")
+                print("1. Ver archivos PDF\n2. Abrir archivo\n3. Subir archivo PDF\n4. Eliminar archivo PDF\n5. Firmar "
+                      "archivo.\n6.Verificar firma de un archivo.\n7.Salir.")
+                select = int(input("Selección: "))
+
+                if select == 1:
+                    gestion_archivos.ver_archivos()
+                elif select == 2:
+                    gestion_archivos.abrir_archivo()
+                elif select == 3:
+                    gestion_archivos.subir_archivos()
+                elif select == 4:
+                    gestion_archivos.eliminar_archivo()
+                elif select == 5:
+                    archivo = input("Indique el archivo que desea firmar (incluyendo la ruta): ")
+                    gestion_firma.firmar_archivo(archivo)
+                elif select == 6:
+                    archivo = input("Indique el archivo que desea verificar (incluyendo la ruta): ")
+                    gestion_firma.verificar_firma(archivo)
+                elif select == 7:
+                    print("\nCerrando sesión...\n")
+                    break
+                else:
+                    print("Opción no válida.")
+
 
     else:
         print("Opción no válida")

@@ -49,7 +49,7 @@ class RegistroUsuario:
         # Cargar usuarios existentes
         datos = self.cargar_datos('usuarios.json')
 
-        # Comprobar si el usuario ya existe
+        # Comprobar si el usuario ya existe, cambios hechos para diccionario en vez de lista
         for usuario, info in datos["usuarios"].items():
             if usuario == self.__usuario:
                 print("\nERROR: Usuario ya registrado.\n")

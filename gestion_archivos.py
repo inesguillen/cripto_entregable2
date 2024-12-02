@@ -1,25 +1,21 @@
 import os
 import json
-import bcrypt
-import shutil #permite copiar archivos
+
 from MAC import MAC
 from Crypto.Cipher import AES
-from Crypto.Random import get_random_bytes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.backends import default_backend
-import base64
+
 
 class GestionArchivos:
-    def __init__(self, usuario): #), key):
+    def __init__(self, usuario, clave): #), key):
+        self.__clave = clave
         self.__usuario = usuario
 
         self.__archivo_json = 'datos_archivos_usuarios.json'
         self.__ruta_usuario = os.path.join("archivos_usuarios", self.__usuario) #una carpeta para cada usuario
 
-        self.key = self.cargar_clave() #creamos una clave distinta para cada usuario
+        #self.key = self.cargar_clave() #creamos una clave distinta para cada usuario
 
-        self.mac = MAC(clave=self.key) #esa misma clave del usuario es la que se usa para el mac
+        self.mac = MAC(clave=self.__clave) #esa misma clave del usuario es la que se usa para el mac
         os.makedirs(self.__ruta_usuario, exist_ok=True)
 
     def cargar_datos_json(self): #similar a cargar datos de usuarios pero esta vez con los archivos pdf
@@ -33,58 +29,7 @@ class GestionArchivos:
         with open(self.__archivo_json, 'w') as file:
             json.dump(data, file, indent=4)
 
-    def cargar_usuario(self, archivo, usuario):
-        if os.path.exists(archivo):
-            with open(archivo, 'r') as file:
-                datos = json.load(file)  # Cargar todo el JSON
-                return datos["usuarios"].get(usuario, None)  # Buscar solo el usuario específico
-        else:
-            return None  # Si no existe el archivo, devolvemos None
 
-    #usamos  PBKDF2 (Password-Based Key Derivation Function 2) para generar la clave a partir de la contraseña de cada usuario
-    def cargar_clave(self):
-        # Archivo para almacenar el salt
-        salt_file = f"{self.__usuario}_salt.bin"
-
-        # Comprobar si el salt ya existe o generarlo, se usa para proteger contra ataques de fuerza bruta
-        #el salt es un valor aleatorio que se le añade a la contraseña para que no genere la misma clave en caso de que
-        #haya dos contraseñas iguales
-        if os.path.exists(salt_file):
-            with open(salt_file, 'rb') as sf:
-                salt = sf.read()  # Leer el salt existente, si el salt existe significa que el usuario ya ha usado la app
-        else:
-            salt = os.urandom(16)  # Generar un nuevo salt aleatorio de 16 bytes
-            with open(salt_file, 'wb') as sf:
-                sf.write(salt)  # Guardar el salt en un archivo para uso futuro
-
-        usuario_datos = self.cargar_usuario('usuarios.json', self.__usuario) #cargamos solo los datos de ese usuario
-
-        password_hash = usuario_datos["password_hash"] #obtenemos el hash almacenado para luego comparar
-        intentos_restantes = 3
-        while intentos_restantes > 0:
-            password = input("Introduce tu contraseña:").encode('utf-8')
-
-            if bcrypt.checkpw(password, password_hash.encode()):
-                print("Contraseña correcta.")
-                break
-            else:
-                intentos_restantes -= 1
-                print(f"Contraseña incorrecta. Intentos restantes: {intentos_restantes}")
-        if intentos_restantes == 0:
-            raise ValueError("Número máximo de intentos alcanzado. Acceso denegado.")
-            return
-
-            # Derivar la clave con PBKDF2
-        kdf = PBKDF2HMAC(
-            algorithm=hashes.SHA256(),
-            length=32,  # Longitud de la clave en bytes
-            salt=salt,
-            iterations=100000,  # Iteraciones de derivación
-            backend=default_backend()
-        )
-        clave_derivada = kdf.derive(password)  # Derivar la clave usando la contraseña válida
-
-        return clave_derivada
 
 
     def ver_archivos(self):
@@ -123,11 +68,11 @@ class GestionArchivos:
         # Añade encrypted porque se usa al cifrar el archivo.
 
         # Generar MAC del archivo
-        mac_generado = self.mac.generar_mac(self.cargar_clave(), ruta_archivo)
+        mac_generado = self.mac.generar_mac(self.__clave, ruta_archivo)
         print(f"MAC generado al subir: {mac_generado}")
 
         #cifra y lo guarda en ruta_destino
-        self.cifrar_archivo(ruta_archivo, ruta_destino)
+        self.cifrar_archivo(ruta_archivo, ruta_destino, self.__clave)
 
         usuario_data = None
         # Iteramos por cada usuario en la lista de datos de usuarios
@@ -200,7 +145,7 @@ class GestionArchivos:
             self.descifrar_archivo(ruta_pdf, ruta_temporal)  #descifra y lo guarda en la ruta temporal
 
             #verificar el mac del pdf que se quiere abrir con el que está almacenado
-            if self.mac.verificar_mac(self.cargar_clave(), ruta_temporal, mac_guardado):
+            if self.mac.verificar_mac(self.__clave, ruta_temporal, mac_guardado):
                 print("El MAC es igual, el archivo no ha sido alterado.")
                 os.startfile(ruta_temporal) #abrir el archivo
             else:
@@ -210,8 +155,8 @@ class GestionArchivos:
 
 
 
-    def cifrar_archivo(self, ruta_archivo, ruta_salida): #ruta del archivo y ruta donde se guarda el archivo cifrado
-        clave = self.cargar_clave()
+    def cifrar_archivo(self, ruta_archivo, ruta_salida, clave): #ruta del archivo y ruta donde se guarda el archivo cifrado
+
         # Cifrar el archivo PDF
         cipher_encrypt = AES.new(clave, AES.MODE_CFB) #crear objeto cifrador con AES en modo CFB
         #CFB= Cipher Feedback, cifrado de bloques. Permite cifrar y descifr sin tamaño fijo
@@ -232,11 +177,11 @@ class GestionArchivos:
         print(f"Cifrado completado: {ruta_salida}")
 
     def descifrar_archivo(self, ruta_archivo_encriptado, ruta_salida): #recibe la ruta del archivo y la ruta para guardar
-        clave = self.cargar_clave()
+
         # Desencriptar el archivo PDF
         with open(ruta_archivo_encriptado, 'rb') as inputfile: #abrir en lectura binaria
             iv = inputfile.read(16)  # Leer el IV, es necesario para que el descifrado coincida con cifrado (simétrico)
-            cipher_decrypt = AES.new(clave, AES.MODE_CFB, iv) #crea objeto descifrador
+            cipher_decrypt = AES.new(self.__clave, AES.MODE_CFB, iv) #crea objeto descifrador
             # se le pasa la key del usuario, el modo CFB y el IV
 
             with open(ruta_salida, 'wb') as outputfile: #abre ruta_salida en escritura binaria
